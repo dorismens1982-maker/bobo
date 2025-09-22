@@ -12,14 +12,37 @@ export const useInvoices = () => {
     pending: 0,
     overdue: 0
   })
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
-    if (user) {
-      fetchInvoices()
-      subscribeToInvoices()
+    // Don't proceed if auth is still loading
+    if (authLoading) {
+      return
     }
-  }, [user])
+
+    // If auth is done but no user, clear data and stop loading
+    if (!user) {
+      setInvoices([])
+      setStats({
+        total: 0,
+        paid: 0,
+        pending: 0,
+        overdue: 0
+      })
+      setLoading(false)
+      return
+    }
+
+    // User is authenticated, fetch invoices
+    fetchInvoices()
+    const unsubscribe = subscribeToInvoices()
+    
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
+  }, [user, authLoading])
 
   const fetchInvoices = async () => {
     try {
